@@ -2,7 +2,7 @@ import tkinter as tk
 from PIL import ImageTk
 import PIL.Image
 import cv2
-from tkinter import Frame,Label,Button,YES,LEFT,BOTH
+from tkinter import Frame, Label, Button, YES, LEFT, BOTH
 from tkinter.messagebox import showinfo
 
 
@@ -11,26 +11,30 @@ class Application(Frame):
         
         # init main window 
         master.title("Gaze Block Estimation")
-        master.resizable(False,False)
+        master.resizable(False, False)
 
         # init left grid (for gaze blocks)
         frame1 = Frame(master)
         self.nine_grid = [[0 for x in range(3)] for x in range(3)] 
-        content = [['nw','n','ne'],['w','c','e',],['sw','s','se']]
+        content = [['nw', 'n', 'ne'], ['w', 'c', 'e'], ['sw', 's', 'se']]
         for row in range(3):
             for column in range(3):
                 #Button(frame1,width=50,height=10, text=content[row][column]).grid(row = row, column = column)
-                self.nine_grid[row][column] = Button(frame1,width=50,height=10, text=content[row][column])
-                self.nine_grid[row][column].grid(row = row, column = column)
+                self.nine_grid[row][column] = Button(frame1, 
+                                                     width=50, 
+                                                     height=10, 
+                                                     text=content[row][column])
+                self.nine_grid[row][column].grid(row=row, column=column)
         frame1.pack(side=LEFT, fill=BOTH, expand=YES)
 
         # init right grid (for control buttons and webcam)
         frame2 = Frame(master)
         self.connect_to_camera_btn = Button(frame2, text='Connect')
+        self.connect_to_camera_btn.bind("<Button-1>", open_camera)
         self.connect_to_camera_btn.pack()
-        self.status = Label(frame2, text = "Can't find camera")
+        self.status = Label(frame2, text="Can't find camera")
         self.status.pack()
-        self.predict = Label(frame2, text = "Predict : center")
+        self.predict = Label(frame2, text="Predict : center")
         self.predict.pack()
 
         image = cv2.imread(r'D:\DL\code\Gaze-Block-Estimation\webcam.jpg')
@@ -38,9 +42,9 @@ class Application(Frame):
         image = PIL.Image.fromarray(image)
         image = ImageTk.PhotoImage(image)
 
-        self.webcam = Label(frame2,image = image)
+        self.webcam = Label(frame2, image=image)
         self.webcam.image = image
-        self.webcam.place(width = 200, height = 200)
+        self.webcam.place(width=200, height=200)
         self.webcam.pack()
         frame2.pack(side=LEFT, padx=10)
         
@@ -49,14 +53,31 @@ class Application(Frame):
     def set_window_size(self):
         screen_width = root.winfo_screenwidth() - 300
         screen_height = root.winfo_screenheight() - 300
-        root.geometry('%sx%s+%s+%s' % (screen_width, screen_height, 0, 0) )   #center window on desktop
+        root.geometry('%sx%s+%s+%s' % (screen_width, screen_height, 0, 0))   #center window on desktop
 
-    def popup_hello(self): # for command
+    def popup_hello(self):  # for command
         showinfo("Hello", ">_<")
 
-    def popup_hello_event(self,event): # for bind
+    def popup_hello_event(self, event):  # for bind
         showinfo("Hello", ">_<")
     
+    def open_camera(self):
+        capture = cv2.VideoCapture(0)
+
+        # 設定影像的尺寸大小
+        capture.set(cv2.CAP_PROP_FRAME_WIDTH, 200)
+        capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 200)
+
+        while(True):
+            ret, frame = capture.read()
+            #cv2.imshow('frame', frame)
+            self.webcam.image = frame
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        capture.release()
+        cv2.destroyAllWindows()
+
 
 root = tk.Tk()
 app = Application(root)
