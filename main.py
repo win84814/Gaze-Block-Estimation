@@ -28,10 +28,11 @@ class Application(Frame):
             for column in range(3):
                 #Button(frame1,width=50,height=10, text=content[row][column]).grid(row = row, column = column)
                 self.nine_grid[row][column] = Button(frame1, 
-                                                     width=50, 
-                                                     height=10, 
+                                                     width=80, 
+                                                     height=15, 
                                                      text=content[row][column])
                 self.nine_grid[row][column].grid(row=row, column=column)
+        self.nine_grid[1][1].bind("<Button-1>", self.popup_hello_event)
         frame1.pack(side=LEFT, fill=BOTH, expand=YES)
 
         # init right grid (for control buttons and webcam)
@@ -56,9 +57,9 @@ class Application(Frame):
         image = ImageTk.PhotoImage(image)
         self.webcam = Label(frame2, image=image)
         self.webcam.image = image
-        self.webcam.place(width=200, height=200)
+        self.webcam.place(width=50, height=50)
         self.webcam.pack()
-        frame2.pack(side=LEFT, padx=10)
+        frame2.pack(side=LEFT, padx=0)
         
         # init webcam object & thread
         self.thread_w = threading.Thread(target=self.webcam_thread)
@@ -74,13 +75,22 @@ class Application(Frame):
     def set_window_size(self):
         screen_width = root.winfo_screenwidth() - 300
         screen_height = root.winfo_screenheight() - 300
-        root.geometry('%sx%s+%s+%s' % (screen_width, screen_height, 0, 0))   #center window on desktop
+        root.geometry('%sx%s+%s+%s' % (screen_width, screen_height, 0, 0))  #center window on desktop
 
     def popup_hello(self):  # for command
         showinfo("Hello", ">_<")
 
     def popup_hello_event(self, event):  # for bind
-        showinfo("Hello", ">_<")
+        #showinfo("Hello", ">_<")
+        #orig_color = self.nine_grid[0][0].cget("background")
+
+        self.nine_grid[1][0].configure(bg="red")
+        self.nine_grid[0][0].configure(bg="SystemButtonFace")
+    
+    def reset_nine_grid_color(self):
+        for x in range(3):
+            for y in range(3):
+                self.nine_grid[x][y].configure(bg="SystemButtonFace")
 
     def popup_qq_event(self):
         showinfo("QQ", "QAQ")
@@ -98,7 +108,7 @@ class Application(Frame):
         model_path = r'D:\DL\model\two_eyes_gaze_keras_resnet50_model.h5'
         self.model = load_model(model_path)
         
-        self.model.predict(np.zeros((1, 32, 128, 3)))  # before using model, must predict once to avoid ' Tensor is not an element of this graph.'
+        self.model.predict(np.zeros((1, 32, 128, 3)))  # before using model, must predict once to avoid 'Tensor is not an element of this graph.'
 
         self.predict['text'] = 'Using model'
         print('loading completed!')
@@ -109,39 +119,38 @@ class Application(Frame):
                     'LeftDown', 'Down', 'RightDown']
 
         # 設定影像的尺寸大小
-        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 200)
-        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 200)
+        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
         # 刷新縮圖
         while(self.thread_w_signal):
             ret, frame = self.capture.read()  # frame is BGR
             tkframe = dlib_utils.find_face_and_eyes(frame)
-            tkframe = cv2.cvtColor(tkframe, cv2.COLOR_BGR2RGB)
+            tkframe = cv2.cvtColor(tkframe, cv2.COLOR_BGR2RGB)  # transfer BGR to RGB
             tkframe = PIL.Image.fromarray(tkframe)
             tkframe = ImageTk.PhotoImage(tkframe)
             self.webcam.imgtk = tkframe
             self.webcam.config(image=tkframe)
 
-            
             # predict
             if self.model is not None:
                 catch, two_eyes = dlib_utils.crop_two_eyes(frame) 
+                
+                self.reset_nine_grid_color()
                 # avoid crop nothing
                 if catch:
-                    
-                    #two_eyes = cv2.resize(two_eyes, (128, 32))
-                    #two_eyes = image.load_img(two_eyes, target_size=(32, 128)) # keras is RGB
-                    #two_eyes = two_eyes[..., ::-1]  # transfer BGR to RGB
-                    two_eyes = cv2.cvtColor(two_eyes, cv2.COLOR_BGR2RGB)
+                    two_eyes = cv2.cvtColor(two_eyes, cv2.COLOR_BGR2RGB)  # transfer BGR to RGB
                     x = image.img_to_array(two_eyes)
                     x = np.expand_dims(x, axis=0)  # shape(1, 32, 128, 3)
                     x /= 255  # normalize
                     pred = self.model.predict(x)[0]
                     top_inds = pred.argsort()[::-1][:5]
-                    ans = str(cls_list[top_inds[0]]) + ' : ' + str(pred[top_inds[0]])
+                    top_class = top_inds[0]
+                    ans = str(cls_list[top_class]) + ' : ' + str(pred[top_class])
                     self.predict['text'] = ans
                     print(ans)
-            
+                    self.nine_grid[int(top_class / 3)][top_class % 3].configure(bg="red")
+                
     def on_closing(self):
         ans = askyesno(title='Quit', message='Do you want to quit?')
         if ans:
