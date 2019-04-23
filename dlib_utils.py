@@ -65,7 +65,7 @@ def crop_two_eyes(img):
                           1)
             '''
     #return img[tx-10:tx+tw+10, ty-10:ty+th+10]
-    print(tx, ty, tw, th)
+    #print(tx, ty, tw, th)
     if tx == 0 or ty == 0:
         return False, img
     else:
