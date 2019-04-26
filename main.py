@@ -9,7 +9,7 @@ import numpy as np
 from keras import backend as K
 from keras.models import model_from_json
 from keras.preprocessing import image
-
+import time
 img_width, img_height = 128, 32
 
 
@@ -130,8 +130,11 @@ class Application(Frame):
 
         # 刷新縮圖
         while(self.thread_w_signal):
-            ret, frame = self.capture.read()  # frame is BGR
-            tkframe = dlib_utils.find_face_and_eyes(frame)
+            ret, frame = self.capture.read() 
+            start = time.time()
+
+            catch, tkframe, two_eyes = dlib_utils.find_face_and_crop_two_eyes(frame, img_width, img_height)
+
             tkframe = cv2.cvtColor(tkframe, cv2.COLOR_BGR2RGB)  # transfer BGR to RGB
             tkframe = Image.fromarray(tkframe)
             tkframe = ImageTk.PhotoImage(tkframe)
@@ -140,8 +143,6 @@ class Application(Frame):
 
             # predict
             if self.model is not None:
-                catch, two_eyes = dlib_utils.crop_two_eyes(frame, img_width, img_height) 
-                
                 # avoid crop nothing
                 if catch:
                     two_eyes = cv2.cvtColor(two_eyes, cv2.COLOR_BGR2RGB)  # transfer BGR to RGB
@@ -152,7 +153,10 @@ class Application(Frame):
                     self.frame_queue = np.vstack([self.frame_queue, x])
                 else:
                     self.frame_queue = np.empty((0, img_height, img_width, 3))
-
+            end = time.time()
+            seconds = end - start
+            print('fps', (1/seconds))
+            
     def gaze_direction_thread(self):
         cls_list = ['LeftUp', 'Up', 'RightUp',
                     'Left', 'Center', 'Right',
