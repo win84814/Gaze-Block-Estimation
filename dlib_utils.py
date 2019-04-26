@@ -62,12 +62,11 @@ def crop_two_eyes(img, resize_width=128, resize_height=32):
         # return img[tx-10:tx+tw+10, ty-10:ty+th+10]
         new_img = img[max(ty-10, 0):ty+th+10, max(tx-10, 0):tx+tw+10]
         new_img = cv2.resize(new_img, (resize_width, resize_height))
-        #cv2.imwrite(r'D:\DL\code\Gaze-Block-Estimation\my_eyes2.png', new_img)
+        # cv2.imwrite(r'D:\DL\code\Gaze-Block-Estimation\my_eyes2.png', new_img)
         return True, new_img  # img[ty-10:ty+th+10, tx-10:tx+tw+10]
 
 
 def find_face_and_crop_two_eyes(img, resize_width=128, resize_height=32):
-    #img = imutils.resize(img)  # 調整圖片寬度
     img_thumbnail = img
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     rects = detector(gray, 1)
@@ -78,7 +77,7 @@ def find_face_and_crop_two_eyes(img, resize_width=128, resize_height=32):
         (x, y, w, h) = face_utils.rect_to_bb(rect)
         tx, ty, tw, th = get_rectangle(shape[36:47, :])
         #break  # detect only one person
-        
+    
     if tx == 0 or ty == 0:
         return False, img, img
     else:
@@ -92,7 +91,7 @@ def find_face_and_crop_two_eyes(img, resize_width=128, resize_height=32):
                       (255, 0, 0),
                       1)
         return True, img_thumbnail, new_img
-
+    
 
 def main():
     cap = cv2.VideoCapture(0)

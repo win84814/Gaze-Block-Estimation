@@ -70,16 +70,15 @@ class Application(Frame):
         self.thread_m = threading.Thread(target=self.load_model_thread)
         self.model = None
 
-        # init gaze direction thread
-        self.thread_g = threading.Thread(target=self.gaze_direction_thread)
-        self.frame_queue = np.empty((0, img_height, img_width, 3))
+        # init frame counter
+        self.frame_counter = np.full((3), -1)
 
         #self.set_window_size()
         
     def set_window_size(self):
         screen_width = root.winfo_screenwidth() - 300
         screen_height = root.winfo_screenheight() - 300
-        root.geometry('%sx%s+%s+%s' % (screen_width, screen_height, 0, 0))  #center window on desktop
+        root.geometry('%sx%s+%s+%s' % (screen_width, screen_height, 0, 0))  # center window on desktop
 
     def popup_hello(self):  # for command
         showinfo("Hello", ">_<")
@@ -102,12 +101,10 @@ class Application(Frame):
     def open_camera(self, event):
         self.thread_w_signal = True
         self.thread_w.start()
-        self.thread_g.start()
         self.status['text'] = 'Using webcam'
     
     def load_model(self, event):
         self.thread_m.start()
-        #self.thread_g.start()
 
     def load_model_thread(self):
         print('loading model...')
@@ -127,11 +124,10 @@ class Application(Frame):
         self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
-
         # 刷新縮圖
         while(self.thread_w_signal):
-            ret, frame = self.capture.read() 
             start = time.time()
+            ret, frame = self.capture.read() 
 
             catch, tkframe, two_eyes = dlib_utils.find_face_and_crop_two_eyes(frame, img_width, img_height)
 
@@ -144,42 +140,38 @@ class Application(Frame):
             # predict
             if self.model is not None:
                 # avoid crop nothing
+
                 if catch:
-                    two_eyes = cv2.cvtColor(two_eyes, cv2.COLOR_BGR2RGB)  # transfer BGR to RGB
-                    
-                    x = np.expand_dims(two_eyes, axis=0)  # shape(1, 32, 128, 3)
+                    # preprocessing
+                    x = cv2.cvtColor(two_eyes, cv2.COLOR_BGR2RGB)  # transfer BGR to RGB
+                    x = np.expand_dims(x, axis=0)  # shape(1, 32, 128, 3)
                     x = x.astype(np.float32)  # tranfer uint8 to float32
                     x /= 255  # normalize
-                    self.frame_queue = np.vstack([self.frame_queue, x])
-                else:
-                    self.frame_queue = np.empty((0, img_height, img_width, 3))
+
+                    # predict gaze direction
+                    predict = self.model.predict(x)[0]
+                    top_class = np.argmax(predict)
+
+                    # count estimation
+                    self.frame_counter[1] = top_class
+                    if self.frame_counter[1] == self.frame_counter[0]:
+                        self.frame_counter[2] += 1
+                    else:
+                        self.frame_counter[2] = 0\
+                    
+                    # change color
+                    if self.frame_counter[2] >= 7:
+                        self.reset_nine_grid_color()
+                        self.nine_grid[int(top_class / 3)][top_class % 3].configure(bg="red")
+                        self.frame_counter[2] -= 8
+                    
+                    print(self.frame_counter)
+                    self.frame_counter[0] = self.frame_counter[1]
+
             end = time.time()
             seconds = end - start
             print('fps', (1/seconds))
             
-    def gaze_direction_thread(self):
-        cls_list = ['LeftUp', 'Up', 'RightUp',
-                    'Left', 'Center', 'Right',
-                    'LeftDown', 'Down', 'RightDown']
-
-        print('start gaze_direction_thread')
-        while(True):
-            if self.model is not None:
-                if self.frame_queue.shape[0] >= 6:  # each 6 frame, predict a result
-                    frames = self.frame_queue[:6]
-                    self.frame_queue = np.delete(self.frame_queue, [0, 1, 2, 3, 4, 5], axis=0)
-                    predicts = self.model.predict(frames)
-                    predict = predicts[0] + predicts[1] + predicts[2] + predicts[3] + predicts[4] + predicts[5]
-                    top_class = np.argmax(predict)
-                    
-                    # change color & text
-                    ans = str(cls_list[top_class]) + ' : ' + str(predict[top_class])
-                    self.predict['text'] = ans
-                    print(predict)
-                    print(ans)
-                    self.reset_nine_grid_color()
-                    self.nine_grid[int(top_class / 3)][top_class % 3].configure(bg="red")
-                    
     def on_closing(self):
         ans = askyesno(title='Quit', message='Do you want to quit?')
         if ans:
