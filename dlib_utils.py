@@ -3,7 +3,7 @@ import argparse
 import imutils
 import dlib
 import cv2
-
+import time
 predictor_path = 'D:/DL/dataset/dlib/shape_predictor_68_face_landmarks.dat'
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(predictor_path)
@@ -104,6 +104,30 @@ def main():
             break
     cap.release()
     cv2.destroyAllWindows()
+
+def time_of_crop():
+    cap = cv2.VideoCapture(0)
     
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 720)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    start, end = 0, 0
+    while(cap.isOpened()):
+        ret, frame = cap.read()
+        start = time.time()
+        catch, thumbnail, new_img = find_face_and_crop_two_eyes(frame) 
+        end = time.time() - start
+        print(end, 'secs')
+        #if catch:
+        #    cv2.imwrite(r'D:\DL\code\Gaze-Block-Estimation\9\my_face.png', thumbnail)
+        #    cv2.imwrite(r'D:\DL\code\Gaze-Block-Estimation\9\my_eyes.png', new_img)
+        #    print(end, 'secs')
+        #    break
+        cv2.imshow('frame', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cap.release()
+    cv2.destroyAllWindows()
+
 if __name__ == '__main__':
-    main()
+    #main()
+    time_of_crop()
