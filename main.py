@@ -15,16 +15,16 @@ import time
 #model_path = r'D:\DL\model\20190424\two_eyes_gaze_keras_resnet50_model.json'
 #model_weight_path = r'D:\DL\model\20190424\two_eyes_gaze_keras_resnet50_model.h5'
 
-img_width, img_height = 224, 96
-model_path = r'D:\DL\code\weight\201904302\two_eyes_gaze_keras_inceptionv3_model.json'
-model_weight_path = r'D:\DL\code\weight\201904302\two_eyes_gaze_keras_inceptionv3_model.h5'
+img_width, img_height = 128, 32
+model_path = r'D:\DL\code\weight\20190429\two_eyes_gaze_keras_resnet50_model.json'
+model_weight_path = r'D:\DL\code\weight\20190429\two_eyes_gaze_keras_resnet50_model.h5'
 
-nine_grid_button_width =   70#91 #80
-nine_grid_button_height =  20#25 #20
+nine_grid_button_width = 70  # 91 #80
+nine_grid_button_height = 20  # 25 #20
 
 mode_list = ['Demo for big nine grid', 'Demo for big camera', 'Collect data']
-
 mode = mode_list[2]
+
 
 class Application(Frame):
     def __init__(self, master):
@@ -74,7 +74,7 @@ class Application(Frame):
         self.webcam.image = image
         self.webcam.place(width=50, height=50)
         self.webcam.pack()
-        #self.frame2.pack(side=LEFT, padx=0) ### comment for disable right side
+        # self.frame2.pack(side=LEFT, padx=0) ### comment for disable right side
         
         # init webcam object & thread
         self.thread_w = threading.Thread(target=self.webcam_thread)
@@ -86,48 +86,62 @@ class Application(Frame):
         self.model = None
 
         # init test thread for get data
-        self.thread_t = threading.Thread(target=self.test_thread)
+        self.thread_c = threading.Thread(target=self.cycle_thread)
 
         # init frame counter
         self.frame_counter = np.full((3), -1)
-
         
     def set_window_size(self, select_mode):
         if select_mode == mode_list[0]:
-            self.nine_grid[row][col].config(height=20, width=80)
+            for row in range(3):
+                for col in range(3):
+                    self.nine_grid[row][col].config(height=20, width=80)
             self.frame1.pack(side=LEFT, fill=BOTH, expand=YES)
             self.frame2.pack(side=LEFT, padx=0)  # comment for disable right side
 
         elif select_mode == mode_list[1]:
             print('nothing')
         elif select_mode == mode_list[2]:
-            #nine_grid_button_width =   90
-            #nine_grid_button_height =  25
+            # nine_grid_button_width =   90
+            # nine_grid_button_height =  25
             self.frame1.pack(fill=X)
             root.attributes('-fullscreen', True)
             root.geometry("{0}x{1}+0+0".format(root.winfo_screenwidth(), root.winfo_screenheight()))
             for row in range(3):
                 for col in range(3):
-                    #self.nine_grid[row][col].bind("<Button-1>", self.popup_hello_event)
+                    # self.nine_grid[row][col].bind("<Button-1>", self.popup_hello_event)
                     self.nine_grid[row][col].config(height=25, width=90)
-                    self.nine_grid[row][col].bind("<Button-1>", lambda event, r=row, c=col: self.popup_hello_event(r,c))
+                    self.nine_grid[row][col].bind("<Button-1>", lambda event, r=row, c=col: self.click_nine_grid_button(r, c))
+            # self.thread_s.start()
 
-
-        #screen_width = root.winfo_screenwidth() - 300
-        #screen_height = root.winfo_screenheight() - 300
-        #root.geometry('%sx%s+%s+%s' % (screen_width, screen_height, 0, 0))  # center window on desktop
+        # screen_width = root.winfo_screenwidth() - 300
+        # screen_height = root.winfo_screenheight() - 300
+        # root.geometry('%sx%s+%s+%s' % (screen_width, screen_height, 0, 0))  # center window on desktop
 
     def popup_hello(self):  # for command
         showinfo("Hello", ">_<")
 
-    def popup_hello_event(self, r, c):  # for bind
-        #print(r,c)
-        #showinfo("Hello", ">_<")
-        #orig_color = self.nine_grid[0][0].cget("background")
-        
-        #self.nine_grid[1][0].configure(bg="red")
-        #self.nine_grid[0][0].configure(bg="SystemButtonFace")
+    def click_nine_grid_button(self, r, c):
+        # show red one
+        self.reset_nine_grid_color()
         self.set_nine_grid_color(r, c)
+
+        # init camera
+        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
+        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        
+        # init save path
+        frame_count = 0
+        save_path = ''
+        while(frame_count < 100):
+            ret, frame = self.capture.read() 
+
+            catch, tkframe, two_eyes = dlib_utils.find_face_and_crop_two_eyes(frame, img_width, img_height)
+
+            frame_count += 1
+        
+        # reset red one
+        self.reset_nine_grid_color()
     
     def set_nine_grid_color(self, row, col):
         self.nine_grid[row][col].configure(bg="red")
@@ -144,7 +158,7 @@ class Application(Frame):
         self.thread_w_signal = True
         self.thread_w.start()
         self.status['text'] = 'Using webcam'
-        #self.thread_t.start()
+        # self.thread_t.start()
 
     def load_model(self, event):
         self.thread_m.start()
@@ -162,7 +176,7 @@ class Application(Frame):
     def webcam_thread(self):
         print('start webcam_thread')
         # 設定影像的尺寸大小
-        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
         self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
 
         # 刷新縮圖
@@ -213,7 +227,7 @@ class Application(Frame):
             seconds = end - start
             print('fps', (1/seconds))
 
-    def test_thread(self):    
+    def cycle_thread(self):    
         start = time.time()
         pikapika = -1
         while(True):
@@ -221,10 +235,11 @@ class Application(Frame):
             print(now, 's')
             if now % 18 != pikapika:
                 self.reset_nine_grid_color()
-                self.nine_grid[int(pikapika / 6)][int((pikapika % 6) / 2)].configure(bg="red")
+                #self.nine_grid[int(pikapika / 6)][int((pikapika % 6) / 2)].configure(bg="red")
+                self.set_nine_grid_color(int(pikapika / 6), int((pikapika % 6) / 2))
             pikapika = now % 18
             print(pikapika, '/ 18')
-
+    
     def on_closing(self):
         ans = askyesno(title='Quit', message='Do you want to quit?')
         if ans:
