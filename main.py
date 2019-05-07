@@ -1,3 +1,4 @@
+# -- coding: utf-8
 import tkinter as tk
 from PIL import ImageTk, Image
 import cv2
@@ -6,18 +7,19 @@ from tkinter.messagebox import showinfo, askyesno
 import threading
 import dlib_utils
 import numpy as np
-from keras import backend as K
-from keras.models import model_from_json
-from keras.preprocessing import image
+#from keras import backend as K
+#from keras.models import model_from_json
+#from keras.preprocessing import image
 import time
 
 #img_width, img_height = 128, 32
 #model_path = r'D:\DL\model\20190424\two_eyes_gaze_keras_resnet50_model.json'
 #model_weight_path = r'D:\DL\model\20190424\two_eyes_gaze_keras_resnet50_model.h5'
 
+camera_width, camera_height = 480, 480
 img_width, img_height = 128, 32
-model_path = r'D:\DL\code\weight\20190429\two_eyes_gaze_keras_resnet50_model.json'
-model_weight_path = r'D:\DL\code\weight\20190429\two_eyes_gaze_keras_resnet50_model.h5'
+model_path = r'D:\DL\code\weight\20190506\two_eyes_gaze_keras_resnet50_model.json'
+model_weight_path = r'D:\DL\code\weight\20190506\two_eyes_gaze_keras_resnet50_model.h5'
 
 nine_grid_button_width = 70  # 91 #80
 nine_grid_button_height = 20  # 25 #20
@@ -25,10 +27,11 @@ nine_grid_button_height = 20  # 25 #20
 mode_list = ['Demo for big nine grid', 'Demo for big camera', 'Collect data']
 mode = mode_list[2]
 
+name = 'jie'
+date = '20190507'
 
 class Application(Frame):
     def __init__(self, master):
-        
         # init main window 
         master.title("Gaze Block Estimation")
         master.resizable(False, False)
@@ -66,7 +69,7 @@ class Application(Frame):
         self.predict.pack()
 
         # init webcam logo
-        image = cv2.imread(r'D:\DL\code\Gaze-Block-Estimation\webcam.jpg')
+        image = cv2.imread('webcam.jpg')
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(image)
         image = ImageTk.PhotoImage(image)
@@ -80,6 +83,8 @@ class Application(Frame):
         self.thread_w = threading.Thread(target=self.webcam_thread)
         self.thread_w_signal = False
         self.capture = cv2.VideoCapture(0)
+        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, camera_width)
+        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_height)
 
         # init model thread
         self.thread_m = threading.Thread(target=self.load_model_thread)
@@ -123,26 +128,37 @@ class Application(Frame):
 
     def click_nine_grid_button(self, r, c):
         # show red one
-        self.reset_nine_grid_color()
+        #self.reset_nine_grid_color()
         self.set_nine_grid_color(r, c)
+        frame_count = 0
 
         # init camera
-        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
-        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        #self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
+        #self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         
-        # init save path
-        frame_count = 0
-        save_path = ''
-        while(frame_count < 100):
+        # init time
+        start = time.time()
+
+        while(frame_count < 10):
             ret, frame = self.capture.read() 
 
-            catch, tkframe, two_eyes = dlib_utils.find_face_and_crop_two_eyes(frame, img_width, img_height)
-
-            frame_count += 1
+            #catch, tkframe, two_eyes = dlib_utils.find_face_and_crop_two_eyes(frame, img_width, img_height)
+            catch, one_r, one_l, two = dlib_utils.find_one_two_eyes(frame)
+            if catch:
+                cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{3:d}\t{2:03d}.png'.format(name, date, frame_count, r*3+c), two)
+                cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{3:d}\r{2:03d}.png'.format(name, date, frame_count, r*3+c), one_r)
+                cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{3:d}\l{2:03d}.png'.format(name, date, frame_count, r*3+c), one_l)
+                frame_count += 1
+                self.nine_grid[r][c].configure(text=str(frame_count))
+                root.update()
         
         # reset red one
         self.reset_nine_grid_color()
-    
+        #self.capture.release()
+        end = time.time() - start
+        print(end, 'secs')
+        #cv2.destroyAllWindows()
+        
     def set_nine_grid_color(self, row, col):
         self.nine_grid[row][col].configure(bg="red")
 
@@ -176,8 +192,8 @@ class Application(Frame):
     def webcam_thread(self):
         print('start webcam_thread')
         # 設定影像的尺寸大小
-        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
-        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, camera_width)
+        self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_height)
 
         # 刷新縮圖
         while(self.thread_w_signal):
@@ -244,6 +260,7 @@ class Application(Frame):
         ans = askyesno(title='Quit', message='Do you want to quit?')
         if ans:
             self.thread_w_signal = False
+            self.capture.release()
             root.destroy()
         else:
             return
@@ -252,4 +269,3 @@ root = tk.Tk()
 app = Application(root)
 root.protocol("WM_DELETE_WINDOW", app.on_closing)
 root.mainloop()
-
