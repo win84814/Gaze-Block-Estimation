@@ -1,16 +1,19 @@
 # -- coding: utf-8
 import tkinter as tk
+from tkinter import Frame, Label, Button, YES, LEFT, BOTH, X, DISABLED
+from tkinter.messagebox import showinfo, askyesno
 from PIL import ImageTk, Image
 import cv2
-from tkinter import Frame, Label, Button, YES, LEFT, BOTH, X
-from tkinter.messagebox import showinfo, askyesno
-import threading
-import dlib_utils
 import numpy as np
+import threading
+import time
+import os
+
+import dlib_utils
+import dir_utils
 #from keras import backend as K
 #from keras.models import model_from_json
 #from keras.preprocessing import image
-import time
 
 #img_width, img_height = 128, 32
 #model_path = r'D:\DL\model\20190424\two_eyes_gaze_keras_resnet50_model.json'
@@ -21,14 +24,16 @@ img_width, img_height = 128, 32
 model_path = r'D:\DL\code\weight\20190506\two_eyes_gaze_keras_resnet50_model.json'
 model_weight_path = r'D:\DL\code\weight\20190506\two_eyes_gaze_keras_resnet50_model.h5'
 
-nine_grid_button_width = 70  # 91 #80
-nine_grid_button_height = 20  # 25 #20
+nine_grid_button_width = 70 
+nine_grid_button_height = 20
 
 mode_list = ['Demo for big nine grid', 'Demo for big camera', 'Collect data']
 mode = mode_list[2]
 
 name = 'jie'
-date = '20190507'
+
+date = '20190508'
+frames_of_grid = 10
 
 class Application(Frame):
     def __init__(self, master):
@@ -43,7 +48,6 @@ class Application(Frame):
         content = [['nw', 'n', 'ne'], ['w', 'c', 'e'], ['sw', 's', 'se']]
         for row in range(3):
             for column in range(3):
-                #Button(frame1,width=50,height=10, text=content[row][column]).grid(row = row, column = column)
                 self.nine_grid[row][column] = Button(self.frame1, 
                                                      width=nine_grid_button_width, 
                                                      height=nine_grid_button_height, 
@@ -107,60 +111,54 @@ class Application(Frame):
         elif select_mode == mode_list[1]:
             print('nothing')
         elif select_mode == mode_list[2]:
-            # nine_grid_button_width =   90
-            # nine_grid_button_height =  25
             self.frame1.pack(fill=X)
             root.attributes('-fullscreen', True)
             root.geometry("{0}x{1}+0+0".format(root.winfo_screenwidth(), root.winfo_screenheight()))
             for row in range(3):
                 for col in range(3):
-                    # self.nine_grid[row][col].bind("<Button-1>", self.popup_hello_event)
-                    self.nine_grid[row][col].config(height=25, width=90)
+                    self.nine_grid[row][col].config(height=24, width=90)
                     self.nine_grid[row][col].bind("<Button-1>", lambda event, r=row, c=col: self.click_nine_grid_button(r, c))
-            # self.thread_s.start()
+                    self.nine_grid[row][col].bind("<Button-3>", self.on_closing_evt)
 
-        # screen_width = root.winfo_screenwidth() - 300
-        # screen_height = root.winfo_screenheight() - 300
-        # root.geometry('%sx%s+%s+%s' % (screen_width, screen_height, 0, 0))  # center window on desktop
 
     def popup_hello(self):  # for command
         showinfo("Hello", ">_<")
 
     def click_nine_grid_button(self, r, c):
         # show red one
-        #self.reset_nine_grid_color()
-        self.set_nine_grid_color(r, c)
+        self.set_nine_grid_color(r, c, 'MediumSpringGreen')
         frame_count = 0
 
-        # init camera
-        #self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
-        #self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        
+        # init dir
+        for eye in ['t', 'r', 'l']:
+            dir_utils.make_dir(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{2:d}\{3:s}'.format(name, date, r*3+c, eye))
+
         # init time
         start = time.time()
 
-        while(frame_count < 10):
+        while(frame_count < frames_of_grid):
             ret, frame = self.capture.read() 
 
-            #catch, tkframe, two_eyes = dlib_utils.find_face_and_crop_two_eyes(frame, img_width, img_height)
             catch, one_r, one_l, two = dlib_utils.find_one_two_eyes(frame)
             if catch:
-                cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{3:d}\t{2:03d}.png'.format(name, date, frame_count, r*3+c), two)
-                cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{3:d}\r{2:03d}.png'.format(name, date, frame_count, r*3+c), one_r)
-                cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{3:d}\l{2:03d}.png'.format(name, date, frame_count, r*3+c), one_l)
+                cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{2:d}\t\{3:03d}.png'.format(name, date, r*3+c, frame_count), two)
+                cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{2:d}\r\{3:03d}.png'.format(name, date, r*3+c, frame_count), one_r)
+                cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{2:d}\l\{3:03d}.png'.format(name, date, r*3+c, frame_count), one_l)
                 frame_count += 1
                 self.nine_grid[r][c].configure(text=str(frame_count))
                 root.update()
         
         # reset red one
-        self.reset_nine_grid_color()
-        #self.capture.release()
+        self.set_nine_grid_color(r, c, 'DarkSlateGray')
+        self.nine_grid[r][c].configure(state=DISABLED)
+        self.nine_grid[r][c].unbind("<Button-1>")
+        root.update()
+
         end = time.time() - start
         print(end, 'secs')
-        #cv2.destroyAllWindows()
         
-    def set_nine_grid_color(self, row, col):
-        self.nine_grid[row][col].configure(bg="red")
+    def set_nine_grid_color(self, row, col, color="red"):
+        self.nine_grid[row][col].configure(bg=color)
 
     def reset_nine_grid_color(self):
         for row in range(3):
@@ -174,7 +172,6 @@ class Application(Frame):
         self.thread_w_signal = True
         self.thread_w.start()
         self.status['text'] = 'Using webcam'
-        # self.thread_t.start()
 
     def load_model(self, event):
         self.thread_m.start()
@@ -251,12 +248,19 @@ class Application(Frame):
             print(now, 's')
             if now % 18 != pikapika:
                 self.reset_nine_grid_color()
-                #self.nine_grid[int(pikapika / 6)][int((pikapika % 6) / 2)].configure(bg="red")
                 self.set_nine_grid_color(int(pikapika / 6), int((pikapika % 6) / 2))
             pikapika = now % 18
             print(pikapika, '/ 18')
     
     def on_closing(self):
+        ans = askyesno(title='Quit', message='Do you want to quit?')
+        if ans:
+            self.thread_w_signal = False
+            self.capture.release()
+            root.destroy()
+        else:
+            return
+    def on_closing_evt(self, event):
         ans = askyesno(title='Quit', message='Do you want to quit?')
         if ans:
             self.thread_w_signal = False

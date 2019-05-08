@@ -95,7 +95,7 @@ def find_face_and_crop_two_eyes(img, resize_width=128, resize_height=32):
         print((tw+20))
         return True, img_thumbnail, new_img
     
-def find_one_two_eyes(img, resize_width=128, resize_height=32):
+def find_one_two_eyes(img):
     #img_thumbnail = img
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     rects = detector(gray, 1)
@@ -115,7 +115,6 @@ def find_one_two_eyes(img, resize_width=128, resize_height=32):
         two_img = img[max(ty-10, 0):ty+th+10, max(tx-10, 0):tx+tw+10]
         r_img = img[max(ry-10, 0):ry+rh+10, max(rx-10, 0):rx+rw+10]
         l_img = img[max(ly-10, 0):ly+lh+10, max(lx-10, 0):lx+lw+10]
-        #two_img = cv2.resize(two_img, (resize_width, resize_height))
         '''
         cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 0), 2)
         cv2.rectangle(img,
@@ -126,7 +125,6 @@ def find_one_two_eyes(img, resize_width=128, resize_height=32):
         cv2.rectangle(img, (rx, ry), (rx + rw, ry + rh), (0, 0, 255), 2)
         cv2.rectangle(img, (lx, ly), (lx + lw, ly + lh), (0, 0, 255), 2)
         '''
-        #print((tw+20))
         return True, r_img, l_img, two_img
 
 def main():
@@ -151,19 +149,12 @@ def time_of_crop():
     while(cap.isOpened()):
         start = time.time()
         ret, frame = cap.read()
-        #cv2.imshow('frame', frame)
+        cv2.imshow('frame', frame)
         catch, one_r, one_l, two = find_one_two_eyes(frame)
-        
-        if catch:
-            cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{3:d}{2:03d}.png'.format(name, date, frame_count, 1), two)
-            cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{3:d}{2:03d}.png'.format(name, date, frame_count, 2), one_r)
-            cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{3:d}{2:03d}.png'.format(name, date, frame_count, 3), one_l)
-            end = time.time() - start
-            print(end, 'secs')
+        end = time.time() - start
+        print(end, 'secs')
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-        
-        #if cv2.waitKey(1) & 0xFF == ord('q'):
-        #    break
     cap.release()
     cv2.destroyAllWindows()
 
