@@ -33,7 +33,7 @@ mode = mode_list[2]
 name = 'jie'
 
 date = '20190508'
-frames_of_grid = 10
+frames_of_grid = 100
 
 class Application(Frame):
     def __init__(self, master):
@@ -73,7 +73,7 @@ class Application(Frame):
         self.predict.pack()
 
         # init webcam logo
-        image = cv2.imread('webcam.jpg')
+        image = cv2.imread(r'D:\DL\code\Gaze-Block-Estimation\webcam.jpg')
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(image)
         image = ImageTk.PhotoImage(image)

@@ -145,12 +145,12 @@ def time_of_crop():
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     start, end = 0, 0
-    frame_count = 0
+    #frame_count = 0
     while(cap.isOpened()):
         start = time.time()
         ret, frame = cap.read()
         cv2.imshow('frame', frame)
-        catch, one_r, one_l, two = find_one_two_eyes(frame)
+        #catch, one_r, one_l, two = find_one_two_eyes(frame)
         end = time.time() - start
         print(end, 'secs')
         if cv2.waitKey(1) & 0xFF == ord('q'):
