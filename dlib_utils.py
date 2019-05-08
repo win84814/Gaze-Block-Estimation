@@ -4,6 +4,8 @@ import imutils
 import dlib
 import cv2
 import time
+import os
+import dir_utils
 predictor_path = 'D:/DL/dataset/dlib/shape_predictor_68_face_landmarks.dat'
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(predictor_path)
@@ -158,6 +160,63 @@ def time_of_crop():
     cap.release()
     cv2.destroyAllWindows()
 
+def test_write_video():
+    cap = cv2.VideoCapture(0)
+    
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 480)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+    save_path = r'D:\DL\dataset\eyes\jie\20190508\0'
+    video_path = os.path.join(save_path, 'output.avi')
+ 
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    fps = cap.get(cv2.CAP_PROP_FPS)#幀率
+    print('fps',fps)
+
+    dir_utils.make_dir(save_path)
+    out = cv2.VideoWriter(video_path, fourcc, fps, (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
+
+    frame_count = 0
+
+    while(cap.isOpened()):
+        ret, frame = cap.read()
+        if ret == True:
+            # 寫入影格
+            out.write(frame)
+            frame_count += 1
+            cv2.imshow('frame',frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        else:
+            break
+    # 釋放所有資源
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
+    print('total frames', frame_count)
+
+def test_load_video():
+    save_path = r'D:\DL\dataset\eyes\jie\20190508\0'
+    video_path = os.path.join(save_path, 'output.avi')
+    cap = cv2.VideoCapture(video_path)
+
+    frame_count = 0
+    # 以迴圈從影片檔案讀取影格，並顯示出來
+    while(cap.isOpened()):
+        ret, frame = cap.read()
+        if ret:
+            frame_count += 1
+            cv2.imshow('frame',frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        else:
+            break
+    cap.release()
+    cv2.destroyAllWindows()
+    print('total frames', frame_count)
+
 if __name__ == '__main__':
     #main()
-    time_of_crop()
+    #time_of_crop()
+    #test_write_video()
+    test_load_video()

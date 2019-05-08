@@ -1,4 +1,4 @@
-# -- coding: utf-8
+
 import tkinter as tk
 from tkinter import Frame, Label, Button, YES, LEFT, BOTH, X, DISABLED
 from tkinter.messagebox import showinfo, askyesno
@@ -11,9 +11,9 @@ import os
 
 import dlib_utils
 import dir_utils
-#from keras import backend as K
-#from keras.models import model_from_json
-#from keras.preprocessing import image
+from keras import backend as K
+from keras.models import model_from_json
+from keras.preprocessing import image
 
 #img_width, img_height = 128, 32
 #model_path = r'D:\DL\model\20190424\two_eyes_gaze_keras_resnet50_model.json'
@@ -21,14 +21,14 @@ import dir_utils
 
 camera_width, camera_height = 480, 480
 img_width, img_height = 128, 32
-model_path = r'D:\DL\code\weight\20190506\two_eyes_gaze_keras_resnet50_model.json'
-model_weight_path = r'D:\DL\code\weight\20190506\two_eyes_gaze_keras_resnet50_model.h5'
+model_path = r'D:\DL\code\weight\201905072\two_eyes_gaze_keras_resnet50_model.json'
+model_weight_path = r'D:\DL\code\weight\201905072\two_eyes_gaze_keras_resnet50_model.h5'
 
 nine_grid_button_width = 70 
 nine_grid_button_height = 20
 
 mode_list = ['Demo for big nine grid', 'Demo for big camera', 'Collect data']
-mode = mode_list[2]
+mode = mode_list[0]
 
 name = 'jie'
 
