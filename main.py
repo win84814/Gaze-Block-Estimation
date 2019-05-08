@@ -23,7 +23,7 @@ nine_grid_button_width = 70  # 91 #80
 nine_grid_button_height = 20  # 25 #20
 
 mode_list = ['Demo for big nine grid', 'Demo for big camera', 'Collect data']
-mode = mode_list[2]
+mode = mode_list[0]
 
 
 class Application(Frame):
@@ -66,7 +66,7 @@ class Application(Frame):
         self.predict.pack()
 
         # init webcam logo
-        image = cv2.imread(r'D:\DL\code\Gaze-Block-Estimation\webcam.jpg')
+        image = cv2.imread('./webcam.jpg')
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(image)
         image = ImageTk.PhotoImage(image)
