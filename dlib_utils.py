@@ -5,13 +5,11 @@ import dlib
 import cv2
 import time
 import os
-import dir_utils
+import utils
 predictor_path = 'D:/DL/dataset/dlib/shape_predictor_68_face_landmarks.dat'
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(predictor_path)
 
-name = 'jie'
-date = '20190507'
 
 def get_rectangle(points):
     columns = [[row[col] for row in points] for col in range(len(points[1]))]
@@ -173,7 +171,7 @@ def test_write_video():
     fps = cap.get(cv2.CAP_PROP_FPS)#幀率
     print('fps',fps)
 
-    dir_utils.make_dir(save_path)
+    utils.make_dir(save_path)
     out = cv2.VideoWriter(video_path, fourcc, fps, (int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))))
 
     frame_count = 0
@@ -196,8 +194,8 @@ def test_write_video():
     print('total frames', frame_count)
 
 def test_load_video():
-    save_path = r'D:\DL\dataset\eyes\jie\20190508\0'
-    video_path = os.path.join(save_path, 'output.avi')
+    save_path = r'D:\DL\dataset\eyes\jie\3x3'
+    video_path = os.path.join(save_path, 'jie_3x3_1.avi')
     cap = cv2.VideoCapture(video_path)
 
     frame_count = 0
@@ -215,8 +213,63 @@ def test_load_video():
     cv2.destroyAllWindows()
     print('total frames', frame_count)
 
+def get_eyes_data(path):
+    print(path)
+    videos_path = utils.get_files(path, '*.avi')
+    print(videos_path)
+
+    all_true_frames = 0
+    all_frames = 0
+    for i in range(len(videos_path)):
+        print(videos_path[i], i)
+        save_path = os.path.join(os.path.dirname(videos_path[i]), utils.get_last_number(videos_path[i]))
+        r_path = os.path.join(save_path, 'r')
+        l_path = os.path.join(save_path, 'l')
+        t_path = os.path.join(save_path, 't')
+        utils.make_dir(save_path)
+        utils.make_dir(r_path)
+        utils.make_dir(l_path)
+        utils.make_dir(t_path)
+
+        cap = cv2.VideoCapture(videos_path[i])
+
+        frame_count = 0
+        true_count = 0
+        # 以迴圈從影片檔案讀取影格，並顯示出來
+        while(cap.isOpened()):
+            ret, frame = cap.read()
+            if ret:        
+                catch, one_r, one_l, two = find_one_two_eyes(frame)
+                if catch:
+                    cv2.imwrite(os.path.join(r_path, '{0:s}_{1:3d}.png'.format(utils.get_filename_without_extension(videos_path[i]), frame_count)), one_r)
+                    cv2.imwrite(os.path.join(l_path, '{0:s}_{1:3d}.png'.format(utils.get_filename_without_extension(videos_path[i]), frame_count)), one_l)
+                    cv2.imwrite(os.path.join(t_path, '{0:s}_{1:3d}.png'.format(utils.get_filename_without_extension(videos_path[i]), frame_count)), two)
+                    true_count +=1
+                frame_count += 1
+            else:
+                break
+        cap.release()
+        all_true_frames += true_count
+        all_frames += frame_count
+        print('true frames', true_count)
+        print('total frames', frame_count)
+    
+    print('all true frames', all_true_frames)
+    print('all frames', all_frames)
+
 if __name__ == '__main__':
     #main()
     #time_of_crop()
     #test_write_video()
-    test_load_video()
+    #test_load_video()
+
+    name = 'jie'
+    grid_size = 3
+
+    grid_type = '{0:d}x{1:d}'.format(grid_size, grid_size)
+    folder_path = r'D:\DL\dataset\eyes\{0:s}\{1:s}'.format(name, grid_type)
+        
+    start = time.time()
+    get_eyes_data(folder_path)
+    end = time.time() - start
+    print(end, 'secs')
