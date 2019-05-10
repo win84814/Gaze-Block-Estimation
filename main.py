@@ -31,18 +31,21 @@ mode = mode_list[2]
 
 name = 'jie'
 grid_size = 3
+frames_of_grid = 500
 
 
-grids_row = grid_size
-grids_col = grid_size
-grids_button_width = 70 
-grids_button_height = 20
+grid_row = grid_size
+grid_col = grid_size
+grid_button_width = 200
+grid_button_height = 200
+grid_type = '{0:d}x{1:d}'.format(grid_row, grid_col)
 
 gaze_frames = 8
 
-grid_type = '{0:d}x{1:d}'.format(grids_row, grids_col)
 change_frequency_frames = 50
-frames_of_grid = 500
+
+
+
 
 class Application(Frame):
     def __init__(self, master):
@@ -51,17 +54,23 @@ class Application(Frame):
         master.resizable(False, False)
         self.frame1 = Frame(master)
         self.frame2 = Frame(master)
-
+        self.grid_image = cv2.imread(r'D:\DL\code\Gaze-Block-Estimation\pixel.png')
+        self.grid_image = cv2.cvtColor(self.grid_image, cv2.COLOR_BGR2RGB)
+        self.grid_image = Image.fromarray(self.grid_image)
+        self.grid_image = ImageTk.PhotoImage(self.grid_image)
         # init left grid (for gaze blocks)
-        self.grids = [[0 for x in range(grids_row)] for x in range(grids_col)] 
+        self.grids = [[0 for x in range(grid_row)] for x in range(grid_col)] 
         content = [['nw', 'n', 'ne'], ['w', 'c', 'e'], ['sw', 's', 'se']]
-        for row in range(grids_row):
-            for column in range(grids_col):
-                self.grids[row][column] = Button(self.frame1, 
-                                                     width=grids_button_width, 
-                                                     height=grids_button_height, 
-                                                     text=content[row][column])
-                self.grids[row][column].grid(row=row, column=column)
+        for row in range(grid_row):
+            for col in range(grid_col):
+                self.grids[row][col] = Button(self.frame1, 
+                                                image=self.grid_image,
+                                                width=grid_button_width, 
+                                                height=grid_button_height,
+                                                bg="SystemButtonFace"
+                                                #text=content[row][column]
+                                                )
+                self.grids[row][col].grid(row=row, column=col)
         #self.frame1.pack(side=LEFT, fill=BOTH, expand=YES)
 
         self.set_window_size(mode)
@@ -113,9 +122,9 @@ class Application(Frame):
         
     def set_window_size(self, select_mode):
         if select_mode == mode_list[0]:
-            for row in range(grids_row):
-                for col in range(grids_col):
-                    self.grids[row][col].config(height=20, width=80)
+            for row in range(grid_row):
+                for col in range(grid_col):
+                    self.grids[row][col].config(height=20, width=360)
             self.frame1.pack(side=LEFT, fill=BOTH, expand=YES)
             self.frame2.pack(side=LEFT, padx=0)  # comment for disable right side
 
@@ -125,9 +134,9 @@ class Application(Frame):
             self.frame1.pack(fill=X)
             root.attributes('-fullscreen', True)
             root.geometry("{0}x{1}+0+0".format(root.winfo_screenwidth(), root.winfo_screenheight()))
-            for row in range(grids_row):
-                for col in range(grids_col):
-                    self.grids[row][col].config(height=24, width=90)
+            for row in range(grid_row):
+                for col in range(grid_col):
+                    self.grids[row][col].config(height=root.winfo_screenheight()//grid_row, width=root.winfo_screenwidth()//grid_col)
                     self.grids[row][col].bind("<Button-1>", lambda event, r=row, c=col: self.click_grids_button(r, c))
                     self.grids[row][col].bind("<Button-3>", self.on_closing_evt)
 
@@ -136,16 +145,15 @@ class Application(Frame):
         showinfo("Hello", ">_<")
 
     def click_grids_button(self, r, c):
-        # show red one
-        self.set_grids_color(r, c, 'MediumSpringGreen')
+        
+        # init show a color
+        self.set_grid_color(r, c, 'MediumSpringGreen')
         frame_count = 0
 
         # init dir
-        #for eye in ['t', 'r', 'l']:
-        #    utils.make_dir(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{2:d}\{3:s}'.format(name, date, r*grids_row+c, eye))
         save_path = r'D:\DL\dataset\eyes\{0:s}\{1:s}'.format(name, grid_type)
         utils.make_dir(save_path)
-        video_path = os.path.join(save_path, '{0:s}_{1:s}_{2:d}.avi'.format(name, grid_type, r*grids_row+c))
+        video_path = os.path.join(save_path, '{0:s}_{1:s}_{2:d}.avi'.format(name, grid_type, r*grid_row+c))
 
         # init time
         start = time.time()
@@ -154,30 +162,18 @@ class Application(Frame):
         while(frame_count < frames_of_grid):
             ret, frame = self.capture.read() 
             
-            # for crop eyes 
-            #catch, one_r, one_l, two = dlib_utils.find_one_two_eyes(frame)
-            #if catch:
-            #    cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{2:d}\t\{3:03d}.png'.format(name, date, r*3+c, frame_count), two)
-            #    cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{2:d}\r\{3:03d}.png'.format(name, date, r*3+c, frame_count), one_r)
-            #    cv2.imwrite(r'D:\DL\dataset\eyes\{0:s}\{1:s}\{2:d}\l\{3:03d}.png'.format(name, date, r*3+c, frame_count), one_l)
-            
             if ret == True:
-            # 寫入影格
                 out.write(frame)
                 frame_count += 1
                 if frame_count % change_frequency_frames == 0:
-                    self.set_grids_color(r, c, utils.random_color())
+                    self.set_grid_color(r, c, utils.random_color())
                 self.grids[r][c].configure(text=str(frame_count))
                 root.update()
 
         out.release()
                
-        
-
-
-        # reset red one
-        #self.set_grids_color(r, c, utils.random_color())
-        self.reset_grids_color()
+        # reset color and disable button
+        self.reset_grid_color()
         self.grids[r][c].configure(state=DISABLED)
         self.grids[r][c].unbind("<Button-1>")
         root.update()
@@ -185,12 +181,12 @@ class Application(Frame):
         end = time.time() - start
         print(end, 'secs')
         
-    def set_grids_color(self, row, col, color="red"):
-        self.grids[row][col].configure(bg=color)
+    def set_grid_color(self, row, col, color="red"):
+        self.grids[row][col].config(bg=color)
 
-    def reset_grids_color(self):
-        for row in range(grids_row):
-            for col in range(grids_col):
+    def reset_grid_color(self):
+        for row in range(grid_row):
+            for col in range(grid_col):
                 self.grids[row][col].configure(bg="SystemButtonFace")
 
     def popup_qq_event(self):
@@ -257,8 +253,8 @@ class Application(Frame):
                     
                     # change color
                     if self.frame_counter[2] >= (gaze_frames-1):
-                        self.reset_grids_color()
-                        self.set_grids_color(int(top_class / grids_row), top_class % grids_row)
+                        self.reset_grid_color()
+                        self.set_grid_color(int(top_class / grid_row), top_class % grid_row)
                         self.frame_counter[2] -= gaze_frames
                     
                     print(self.frame_counter)
@@ -275,8 +271,8 @@ class Application(Frame):
             now = int(time.time() - start)
             print(now, 's')
             if now % 18 != pikapika:
-                self.reset_grids_color()
-                self.set_grids_color(int(pikapika / 6), int((pikapika % 6) / 2))
+                self.reset_grid_color()
+                self.set_grid_color(int(pikapika / 6), int((pikapika % 6) / 2))
             pikapika = now % 18
             print(pikapika, '/ 18')
     
