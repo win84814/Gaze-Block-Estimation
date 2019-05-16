@@ -15,6 +15,12 @@ def random_color():
         color += random.choice('0123456789abcdef') 
     return color
 
+def random_color2(index):
+    colors = ['#003377',  '#227700', '#A42D00', '#008844', '#008888', '#007799', '#888800']
+    total_colors = len(colors)
+    
+    return colors[random.randint(0,total_colors-1)]
+
 def get_filename_without_extension(path):
     fileName = os.path.basename(path)
     fileName = os.path.splitext(fileName)[0]
@@ -32,7 +38,9 @@ def get_last_number(fileName):
     return fileName.split('_')[-1]
 
 if __name__ == '__main__':
-    ret = get_files(r'D:\DL\dataset\eyes\jie\3x3', '*.avi')
-    print(ret)
+    #ret = get_files(r'D:\DL\dataset\eyes\jie\3x3', '*.avi')
+    #print(ret)
     #ret = get_last_number('D:\\DL\\dataset\\eyes\\jie\\3x3\\jie_3x3_5.avi')
     #print(ret)
+    a = random_color2(3)
+    print(a)

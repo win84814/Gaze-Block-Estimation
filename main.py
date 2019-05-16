@@ -1,7 +1,8 @@
 
 import tkinter as tk
-from tkinter import Frame, Label, Button, YES, LEFT, BOTH, X, DISABLED
+from tkinter import Frame, Label, Button, YES, LEFT, BOTH, X, DISABLED, NORMAL
 from tkinter.messagebox import showinfo, askyesno
+from tkinter.simpledialog import askstring
 from PIL import ImageTk, Image
 import cv2
 import numpy as np
@@ -19,7 +20,7 @@ import utils
 #model_path = r'D:\DL\model\20190424\two_eyes_gaze_keras_resnet50_model.json'
 #model_weight_path = r'D:\DL\model\20190424\two_eyes_gaze_keras_resnet50_model.h5'
 
-camera_width, camera_height = 480, 480
+camera_width, camera_height = 480, 640
 img_width, img_height = 128, 32
 model_path = r'D:\DL\code\weight\201905072\two_eyes_gaze_keras_resnet50_model.json'
 model_weight_path = r'D:\DL\code\weight\201905072\two_eyes_gaze_keras_resnet50_model.h5'
@@ -27,11 +28,16 @@ model_weight_path = r'D:\DL\code\weight\201905072\two_eyes_gaze_keras_resnet50_m
 
 
 mode_list = ['Demo for big grid', 'Demo for big camera', 'Collect data']
+grid_frames = [[3,500],[4,300],[5,300]]
 mode = mode_list[2]
 
-name = 'jie'
-grid_size = 3
-frames_of_grid = 500
+for_exe = False
+
+name = 'name'
+gf = 0
+
+grid_size = grid_frames[gf][0]
+frames_of_grid = grid_frames[gf][1]
 
 
 grid_row = grid_size
@@ -49,26 +55,31 @@ change_frequency_frames = 50
 
 class Application(Frame):
     def __init__(self, master):
+        if for_exe:
+            self.name = self.popup_set_name()
+        else:
+            self.name = name
+        print(self.name)
         # init main window 
         master.title("Gaze Block Estimation")
         master.resizable(False, False)
         self.frame1 = Frame(master)
         self.frame2 = Frame(master)
-        self.grid_image = cv2.imread(r'D:\DL\code\Gaze-Block-Estimation\pixel.png')
+        self.grid_image = cv2.imread('pixel.png')
         self.grid_image = cv2.cvtColor(self.grid_image, cv2.COLOR_BGR2RGB)
         self.grid_image = Image.fromarray(self.grid_image)
         self.grid_image = ImageTk.PhotoImage(self.grid_image)
+
+
         # init left grid (for gaze blocks)
         self.grids = [[0 for x in range(grid_row)] for x in range(grid_col)] 
-        content = [['nw', 'n', 'ne'], ['w', 'c', 'e'], ['sw', 's', 'se']]
         for row in range(grid_row):
             for col in range(grid_col):
                 self.grids[row][col] = Button(self.frame1, 
                                                 image=self.grid_image,
                                                 width=grid_button_width, 
                                                 height=grid_button_height,
-                                                bg="SystemButtonFace"
-                                                #text=content[row][column]
+                                                bg="black"
                                                 )
                 self.grids[row][col].grid(row=row, column=col)
         #self.frame1.pack(side=LEFT, fill=BOTH, expand=YES)
@@ -91,7 +102,7 @@ class Application(Frame):
         self.predict.pack()
 
         # init webcam logo
-        image = cv2.imread(r'D:\DL\code\Gaze-Block-Estimation\webcam.jpg')
+        image = cv2.imread('webcam.jpg')
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = Image.fromarray(image)
         image = ImageTk.PhotoImage(image)
@@ -119,6 +130,8 @@ class Application(Frame):
 
         # init frame counter
         self.frame_counter = np.full((3), -1)
+
+
         
     def set_window_size(self, select_mode):
         if select_mode == mode_list[0]:
@@ -144,42 +157,56 @@ class Application(Frame):
     def popup_hello(self):  # for command
         showinfo("Hello", ">_<")
 
+    def popup_set_name(self):
+        res = askstring("Input dialog", "Please enter your student ID.")
+        return res
+
     def click_grids_button(self, r, c):
         
         # init show a color
-        self.set_grid_color(r, c, 'MediumSpringGreen')
+        self.set_grid_color(r, c, '#008844')
         frame_count = 0
 
         # init dir
-        save_path = r'D:\DL\dataset\eyes\{0:s}\{1:s}'.format(name, grid_type)
+        save_path = r'\eyes\{0:s}\{1:s}'.format(self.name, grid_type)
         utils.make_dir(save_path)
-        video_path = os.path.join(save_path, '{0:s}_{1:s}_{2:d}.avi'.format(name, grid_type, r*grid_row+c))
+        video_path = os.path.join(save_path, '{0:s}_{1:s}_{2:d}.avi'.format(self.name, grid_type, r*grid_row+c))
+        
 
-        # init time
-        start = time.time()
-        out = cv2.VideoWriter(video_path, self.fourcc, self.fps, (int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT))))
+        print(save_path)
+        print(video_path)
 
-        while(frame_count < frames_of_grid):
-            ret, frame = self.capture.read() 
-            
-            if ret == True:
-                out.write(frame)
-                frame_count += 1
-                if frame_count % change_frequency_frames == 0:
-                    self.set_grid_color(r, c, utils.random_color())
-                self.grids[r][c].configure(text=str(frame_count))
-                root.update()
+        if not os.path.isfile(video_path):
+            # init time and writer
+            start = time.time()
+            out = cv2.VideoWriter(video_path, self.fourcc, self.fps, (int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT))))
 
-        out.release()
-               
-        # reset color and disable button
+            while(frame_count < frames_of_grid):
+                ret, frame = self.capture.read() 
+                
+                if ret == True:
+                    out.write(frame)
+                    frame_count += 1
+                    if frame_count % change_frequency_frames == 0:
+                        #self.set_grid_color(r, c, utils.random_color())
+                         self.set_grid_color(r, c, utils.random_color2(frame_count))
+                    root.update()
+
+            out.release()
+            end = time.time() - start
+            print(end, 'secs')
+
+            # disable button
+            #self.grids[r][c].unbind("<Button-1>")
+
+        else:
+            showinfo("Warning", "Video has existed!")
+
         self.reset_grid_color()
-        self.grids[r][c].configure(state=DISABLED)
-        self.grids[r][c].unbind("<Button-1>")
         root.update()
+        self.grids[r][c].configure(state=DISABLED)
 
-        end = time.time() - start
-        print(end, 'secs')
+
         
     def set_grid_color(self, row, col, color="red"):
         self.grids[row][col].config(bg=color)
@@ -187,7 +214,7 @@ class Application(Frame):
     def reset_grid_color(self):
         for row in range(grid_row):
             for col in range(grid_col):
-                self.grids[row][col].configure(bg="SystemButtonFace")
+                self.grids[row][col].configure(bg="black")
 
     def popup_qq_event(self):
         showinfo("QQ", "QAQ")
