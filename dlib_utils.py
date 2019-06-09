@@ -6,7 +6,7 @@ import cv2
 import time
 import os
 import utils
-predictor_path = 'D:/DL/dataset/dlib/shape_predictor_68_face_landmarks.dat'
+predictor_path = 'shape_predictor_68_face_landmarks.dat'
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(predictor_path)
 
@@ -131,7 +131,7 @@ def main():
     cap = cv2.VideoCapture(0)
     while(cap.isOpened()):
         ret, frame = cap.read()
-        catch, frame = crop_two_eyes(frame) 
+        #catch, frame = crop_two_eyes(frame) 
         #cv2.imwrite(r'D:\DL\code\Gaze-Block-Estimation\my_eyes.png', frame)
         cv2.imshow('frame', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -194,11 +194,10 @@ def test_write_video():
     print('total frames', frame_count)
 
 def test_load_video():
-    save_path = r'D:\DL\dataset\eyes\jie\3x3'
-    video_path = os.path.join(save_path, 'jie_3x3_1.avi')
+    save_path = r'D:\eyes\dennisliu\4@14'
+    video_path = os.path.join(save_path, 'dennisliu_4@14_10.avi')
     cap = cv2.VideoCapture(video_path)
 
-    '''
     frame_count = 0
     # 以迴圈從影片檔案讀取影格，並顯示出來
     while(cap.isOpened()):
@@ -214,12 +213,6 @@ def test_load_video():
     cap.release()
     cv2.destroyAllWindows()
     print('total frames', frame_count)
-    '''
-    while(cap.isOpened()):
-        ret, frame = cap.read()
-        if ret:
-            cv2.imwrite(os.path.join(save_path, 'face.png'), frame)
-            break
 
 
 def get_eyes_data(path):

@@ -12,9 +12,7 @@ import os
 
 import dlib_utils
 import utils
-#from keras import backend as K
-#from keras.models import model_from_json
-#from keras.preprocessing import image
+
 
 #img_width, img_height = 128, 32
 #model_path = r'D:\DL\model\20190424\two_eyes_gaze_keras_resnet50_model.json'
@@ -22,13 +20,14 @@ import utils
 
 camera_width, camera_height = 480, 640
 img_width, img_height = 128, 32
-model_path = r'D:\DL\code\weight\201905072\two_eyes_gaze_keras_resnet50_model.json'
-model_weight_path = r'D:\DL\code\weight\201905072\two_eyes_gaze_keras_resnet50_model.h5'
+model_path = r'D:\DL\code\weight\20190522\two_eyes_gaze_keras_resnet50_model.json'
+model_weight_path = r'D:\DL\code\weight\20190522\two_eyes_gaze_keras_resnet50_model.h5'
 
 
 
 mode_list = ['Demo for big grid', 'Demo for big camera', 'Collect data']
-grid_frames = [[3,500],[4,300],[5,300]]
+grid_frames = [[3,300],[4,300],[5,300]]
+
 mode = mode_list[2]
 
 for_exe = False
@@ -55,11 +54,6 @@ change_frequency_frames = 50
 
 class Application(Frame):
     def __init__(self, master):
-        if for_exe:
-            self.name = self.popup_set_name()
-        else:
-            self.name = name
-        print(self.name)
         # init main window 
         master.title("Gaze Block Estimation")
         master.resizable(False, False)
@@ -125,8 +119,6 @@ class Application(Frame):
         self.thread_m = threading.Thread(target=self.load_model_thread)
         self.model = None
 
-        # init test thread for get data
-        self.thread_c = threading.Thread(target=self.cycle_thread)
 
         # init frame counter
         self.frame_counter = np.full((3), -1)
@@ -134,19 +126,24 @@ class Application(Frame):
 
         
     def set_window_size(self, select_mode):
+        root.attributes('-fullscreen', True)
+        root.geometry("{0}x{1}+0+0".format(root.winfo_screenwidth(), root.winfo_screenheight()))
         if select_mode == mode_list[0]:
+            from keras import backend as K
+            from keras.models import model_from_json
+            from keras.preprocessing import image
             for row in range(grid_row):
                 for col in range(grid_col):
-                    self.grids[row][col].config(height=20, width=360)
-            self.frame1.pack(side=LEFT, fill=BOTH, expand=YES)
+                    self.grids[row][col].config(height=root.winfo_screenheight()//grid_row, width=(root.winfo_screenwidth()*3/4)//grid_col)
+            self.frame1.config(height=root.winfo_screenheight())
+            self.frame1.pack(side=LEFT)
+            #self.frame1.pack(side=LEFT, fill=BOTH, expand=YES) # it's for full
             self.frame2.pack(side=LEFT, padx=0)  # comment for disable right side
 
         elif select_mode == mode_list[1]:
             print('nothing')
         elif select_mode == mode_list[2]:
             self.frame1.pack(fill=X)
-            root.attributes('-fullscreen', True)
-            root.geometry("{0}x{1}+0+0".format(root.winfo_screenwidth(), root.winfo_screenheight()))
             for row in range(grid_row):
                 for col in range(grid_col):
                     self.grids[row][col].config(height=root.winfo_screenheight()//grid_row, width=root.winfo_screenwidth()//grid_col)
@@ -168,12 +165,11 @@ class Application(Frame):
         frame_count = 0
 
         # init dir
-        save_path = r'\eyes\{0:s}\{1:s}'.format(self.name, grid_type)
+        save_path = r'\eyes\{0:s}\{1:s}'.format(name, grid_type)
         utils.make_dir(save_path)
-        video_path = os.path.join(save_path, '{0:s}_{1:s}_{2:d}.avi'.format(self.name, grid_type, r*grid_row+c))
+        video_path = os.path.join(save_path, '{0:s}_{1:s}_{2:d}.avi'.format(name, grid_type, r*grid_row+c))
         
 
-        print(save_path)
         print(video_path)
 
         if not os.path.isfile(video_path):
@@ -189,7 +185,7 @@ class Application(Frame):
                     frame_count += 1
                     if frame_count % change_frequency_frames == 0:
                         #self.set_grid_color(r, c, utils.random_color())
-                         self.set_grid_color(r, c, utils.random_color2(frame_count))
+                         self.set_grid_color(r, c, utils.random_color2())
                     root.update()
 
             out.release()
@@ -291,17 +287,6 @@ class Application(Frame):
             seconds = end - start
             print('fps', (1/seconds))
 
-    def cycle_thread(self):    
-        start = time.time()
-        pikapika = -1
-        while(True):
-            now = int(time.time() - start)
-            print(now, 's')
-            if now % 18 != pikapika:
-                self.reset_grid_color()
-                self.set_grid_color(int(pikapika / 6), int((pikapika % 6) / 2))
-            pikapika = now % 18
-            print(pikapika, '/ 18')
     
     def on_closing(self):
         ans = askyesno(title='Quit', message='Do you want to quit?')

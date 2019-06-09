@@ -15,7 +15,7 @@ def random_color():
         color += random.choice('0123456789abcdef') 
     return color
 
-def random_color2(index):
+def random_color2():
     colors = ['#003377',  '#227700', '#A42D00', '#008844', '#008888', '#007799', '#888800']
     total_colors = len(colors)
     
@@ -37,10 +37,22 @@ def get_last_number(fileName):
     fileName = os.path.splitext(fileName)[0]
     return fileName.split('_')[-1]
 
+def create_grids(sequence):
+    seq = [[] for i in range(len(sequence))]
+    for row in range(len(sequence)):
+        for col in range(sequence[row]):
+            seq[row].append(0)
+    return seq
+
+def sequence_sum(sequence):
+    seq_sum = [0 for x in range(len(sequence))]
+    for i in range(1, len(sequence)):
+        seq_sum[i] = seq_sum[i-1] + sequence[i-1]
+    return seq_sum
+
 if __name__ == '__main__':
     #ret = get_files(r'D:\DL\dataset\eyes\jie\3x3', '*.avi')
     #print(ret)
     #ret = get_last_number('D:\\DL\\dataset\\eyes\\jie\\3x3\\jie_3x3_5.avi')
     #print(ret)
-    a = random_color2(3)
-    print(a)
+    print('A')
