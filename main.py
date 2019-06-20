@@ -1,6 +1,6 @@
 
 import tkinter as tk
-from tkinter import Frame, Label, Button, YES, LEFT, BOTH, X, DISABLED, NORMAL
+from tkinter import Frame, Label, Button, YES, LEFT, BOTH, X, DISABLED, NORMAL, RIGHT, TOP, BOTTOM
 from tkinter.messagebox import showinfo, askyesno
 from tkinter.simpledialog import askstring
 from PIL import ImageTk, Image
@@ -13,6 +13,11 @@ import os
 import dlib_utils
 import utils
 
+'''
+from keras import backend as K
+from keras.models import model_from_json
+from keras.preprocessing import image
+'''
 
 #img_width, img_height = 128, 32
 #model_path = r'D:\DL\model\20190424\two_eyes_gaze_keras_resnet50_model.json'
@@ -20,19 +25,19 @@ import utils
 
 camera_width, camera_height = 480, 640
 img_width, img_height = 128, 32
-model_path = r'D:\DL\code\weight\20190522\two_eyes_gaze_keras_resnet50_model.json'
-model_weight_path = r'D:\DL\code\weight\20190522\two_eyes_gaze_keras_resnet50_model.h5'
+model_path = r'D:\DL\code\weight\20190527\two_eyes_gaze_keras_resnet50_model.json'
+model_weight_path = r'D:\DL\code\weight\20190527\two_eyes_gaze_keras_resnet50_model.h5'
 
 
 
 mode_list = ['Demo for big grid', 'Demo for big camera', 'Collect data']
 grid_frames = [[3,300],[4,300],[5,300]]
 
-mode = mode_list[2]
+mode = mode_list[0]
 
 for_exe = False
 
-name = 'name'
+name = 'jie4'
 gf = 0
 
 grid_size = grid_frames[gf][0]
@@ -49,7 +54,12 @@ gaze_frames = 8
 
 change_frequency_frames = 50
 
-
+r_col = [3,3,3]
+grid_row = len(r_col)
+grid_col = 3
+r_total_col = utils.sequence_sum(r_col)
+grid_type = '{0:d}x{1:d}'.format(grid_row, grid_col)
+#grid_type = '{0:d}@{1:d}'.format(grid_row, sum(r_col))
 
 
 class Application(Frame):
@@ -57,25 +67,30 @@ class Application(Frame):
         # init main window 
         master.title("Gaze Block Estimation")
         master.resizable(False, False)
-        self.frame1 = Frame(master)
+        #self.load_model_thread()
+
+        #self.frame1 = Frame(master)
         self.frame2 = Frame(master)
         self.grid_image = cv2.imread('pixel.png')
         self.grid_image = cv2.cvtColor(self.grid_image, cv2.COLOR_BGR2RGB)
         self.grid_image = Image.fromarray(self.grid_image)
         self.grid_image = ImageTk.PhotoImage(self.grid_image)
-
-
+        self.frame_grids = [0 for x in range(grid_row)]
+        for i in range(grid_row):
+            self.frame_grids[i] = Frame(master)
         # init left grid (for gaze blocks)
-        self.grids = [[0 for x in range(grid_row)] for x in range(grid_col)] 
+        #self.grids = [[0 for x in range(grid_row)] for x in range(grid_col)] 
+        self.grids = utils.create_grids(r_col)
+
         for row in range(grid_row):
-            for col in range(grid_col):
-                self.grids[row][col] = Button(self.frame1, 
+            for col in range(len(self.grids[row])):
+                self.grids[row][col] = Button(self.frame_grids[row], 
                                                 image=self.grid_image,
                                                 width=grid_button_width, 
                                                 height=grid_button_height,
                                                 bg="black"
                                                 )
-                self.grids[row][col].grid(row=row, column=col)
+                self.grids[row][col].grid(row=0, column=col)
         #self.frame1.pack(side=LEFT, fill=BOTH, expand=YES)
 
         self.set_window_size(mode)
@@ -117,11 +132,12 @@ class Application(Frame):
 
         # init model thread
         self.thread_m = threading.Thread(target=self.load_model_thread)
-        self.model = None
+        #self.model = None
 
 
         # init frame counter
         self.frame_counter = np.full((3), -1)
+
 
 
         
@@ -129,24 +145,28 @@ class Application(Frame):
         root.attributes('-fullscreen', True)
         root.geometry("{0}x{1}+0+0".format(root.winfo_screenwidth(), root.winfo_screenheight()))
         if select_mode == mode_list[0]:
-            from keras import backend as K
-            from keras.models import model_from_json
-            from keras.preprocessing import image
             for row in range(grid_row):
-                for col in range(grid_col):
-                    self.grids[row][col].config(height=root.winfo_screenheight()//grid_row, width=(root.winfo_screenwidth()*3/4)//grid_col)
-            self.frame1.config(height=root.winfo_screenheight())
-            self.frame1.pack(side=LEFT)
+                self.frame_grids[row].pack(side=TOP)
+                for col in range(len(self.grids[row])):
+                    #self.grids[row][col].config(height=root.winfo_screenheight()//grid_row, width=(root.winfo_screenwidth()*3/4)//len(self.grids[row]))
+                    self.grids[row][col].config(height=root.winfo_screenheight()//grid_row, width=root.winfo_screenwidth()//len(self.grids[row]))
+            #self.frame1.config(height=root.winfo_screenheight())
+            #self.frame1.pack(side=LEFT)
             #self.frame1.pack(side=LEFT, fill=BOTH, expand=YES) # it's for full
-            self.frame2.pack(side=LEFT, padx=0)  # comment for disable right side
+            #self.frame2.pack(side=LEFT, padx=0)  # comment for disable right side
+            #self.frame2.config(height=root.winfo_screenheight(), width=root.winfo_screenwidth()/4)
+            #self.frame2.pack(side=RIGHT)  # comment for disable right side
+            
+
 
         elif select_mode == mode_list[1]:
             print('nothing')
         elif select_mode == mode_list[2]:
-            self.frame1.pack(fill=X)
+            #self.frame1.pack(fill=X)
             for row in range(grid_row):
-                for col in range(grid_col):
-                    self.grids[row][col].config(height=root.winfo_screenheight()//grid_row, width=root.winfo_screenwidth()//grid_col)
+                self.frame_grids[row].pack(fill=X)
+                for col in range(len(self.grids[row])):
+                    self.grids[row][col].config(height=root.winfo_screenheight()//grid_row, width=root.winfo_screenwidth()//len(self.grids[row]))
                     self.grids[row][col].bind("<Button-1>", lambda event, r=row, c=col: self.click_grids_button(r, c))
                     self.grids[row][col].bind("<Button-3>", self.on_closing_evt)
 
@@ -154,9 +174,6 @@ class Application(Frame):
     def popup_hello(self):  # for command
         showinfo("Hello", ">_<")
 
-    def popup_set_name(self):
-        res = askstring("Input dialog", "Please enter your student ID.")
-        return res
 
     def click_grids_button(self, r, c):
         
@@ -167,7 +184,7 @@ class Application(Frame):
         # init dir
         save_path = r'\eyes\{0:s}\{1:s}'.format(name, grid_type)
         utils.make_dir(save_path)
-        video_path = os.path.join(save_path, '{0:s}_{1:s}_{2:d}.avi'.format(name, grid_type, r*grid_row+c))
+        video_path = os.path.join(save_path, '{0:s}_{1:s}_{2:d}.avi'.format(name, grid_type, r_total_col[r]+c))
         
 
         print(video_path)
@@ -203,13 +220,12 @@ class Application(Frame):
         self.grids[r][c].configure(state=DISABLED)
 
 
-        
     def set_grid_color(self, row, col, color="red"):
         self.grids[row][col].config(bg=color)
 
     def reset_grid_color(self):
         for row in range(grid_row):
-            for col in range(grid_col):
+            for col in range(len(self.grids[row])):
                 self.grids[row][col].configure(bg="black")
 
     def popup_qq_event(self):
@@ -218,7 +234,7 @@ class Application(Frame):
     def open_camera(self, event):
         self.thread_w_signal = True
         self.thread_w.start()
-        self.status['text'] = 'Using webcam'
+        #self.status['text'] = 'Using webcam'
 
     def load_model(self, event):
         self.thread_m.start()
@@ -230,7 +246,7 @@ class Application(Frame):
             self.model = model_from_json(model_json)
         self.model.load_weights(model_weight_path)
         self.model.predict(np.zeros((1, img_height, img_width, 3)))  # before using model, must predict once to avoid 'Tensor is not an element of this graph.'
-        self.predict['text'] = 'Using model'
+        #self.predict['text'] = 'Using model'
         print('loading completed!')
 
     def webcam_thread(self):
@@ -272,16 +288,19 @@ class Application(Frame):
                     if self.frame_counter[1] == self.frame_counter[0]:
                         self.frame_counter[2] += 1
                     else:
-                        self.frame_counter[2] = 0\
+                        self.frame_counter[2] = 0
                     
                     # change color
                     if self.frame_counter[2] >= (gaze_frames-1):
                         self.reset_grid_color()
-                        self.set_grid_color(int(top_class / grid_row), top_class % grid_row)
+                        #self.set_grid_color(int(top_class / grid_row), top_class % grid_row)    ## bugggggggggggg
+                        to_change_row, to_change_col = utils.get_row_col(r_col, top_class) ## solution?
+                        self.set_grid_color(to_change_row, to_change_col)                  ## solution?
                         self.frame_counter[2] -= gaze_frames
                     
                     print(self.frame_counter)
                     self.frame_counter[0] = self.frame_counter[1]
+
 
             end = time.time()
             seconds = end - start

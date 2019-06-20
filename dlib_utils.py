@@ -259,6 +259,42 @@ def get_eyes_data(path):
     print('all valid frames', all_valid_frames)
     print('all frames', all_frames)
 
+def get_eyes_data_t(path):
+    print(path)
+    videos_path = utils.get_files(path, '*.avi')
+    print(videos_path)
+
+    all_valid_frames = 0
+    all_frames = 0
+    for i in range(len(videos_path)):
+        print(videos_path[i])
+        save_path = os.path.join(os.path.dirname(videos_path[i]), utils.get_last_number(videos_path[i]))
+        utils.make_dir(save_path)
+
+        cap = cv2.VideoCapture(videos_path[i])
+
+        frame_count = 0
+        valid_count = 0
+        # 以迴圈從影片檔案讀取影格，並顯示出來
+        while(cap.isOpened()):
+            ret, frame = cap.read()
+            if ret:        
+                catch, one_r, one_l, two = find_one_two_eyes(frame)
+                if catch:
+                    cv2.imwrite(os.path.join(save_path, '{0:s}_{1:3d}.png'.format(utils.get_filename_without_extension(videos_path[i]), frame_count)), two)
+                    valid_count +=1
+                frame_count += 1
+            else:
+                break
+        cap.release()
+        all_valid_frames += valid_count
+        all_frames += frame_count
+        print('valid frames', valid_count)
+        print('total frames', frame_count)
+    
+    print('all valid frames', all_valid_frames)
+    print('all frames', all_frames)
+
 def get_eyes_data_for_one(path):
     save_path = os.path.join(os.path.dirname(path), utils.get_last_number(path))
     r_path = os.path.join(save_path, 'r')
@@ -294,7 +330,7 @@ if __name__ == '__main__':
     #main()
     #time_of_crop()
     #test_write_video()
-    test_load_video()
+    #test_load_video()
     #get_eyes_data_for_one(r'D:\DL\dataset\eyes\wei\5x5\wei_5x5_4.avi')
     # 
     '''
@@ -309,15 +345,15 @@ if __name__ == '__main__':
     end = time.time() - start
     print(end, 'secs')
     '''
-    '''
-    name = 'ching'
+    
+    name = 'jie4'
     for i in range(3,6):
         grid_size = i
         grid_type = '{0:d}x{1:d}'.format(grid_size, grid_size)
-        folder_path = r'D:\DL\dataset\eyes\{0:s}\{1:s}'.format(name, grid_type)
-
+        #folder_path = r'D:\DL\dataset\eyes\{0:s}\{1:s}'.format(name, grid_type)
+        folder_path = r'D:\eyes\{0:s}\{1:s}'.format(name, grid_type)
         start = time.time()
-        get_eyes_data(folder_path)
+        get_eyes_data_t(folder_path)
         end = time.time() - start
         print(end, 'secs')
-        '''
+        

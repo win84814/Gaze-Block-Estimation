@@ -50,6 +50,18 @@ def sequence_sum(sequence):
         seq_sum[i] = seq_sum[i-1] + sequence[i-1]
     return seq_sum
 
+def get_row_col(sequence, index):
+    row = 0
+    for i in range(len(sequence)):
+        if index >= sequence[i]:
+            index -= sequence[i]
+            row += 1
+        else:
+            break
+    col = index
+    return row, col
+
+
 if __name__ == '__main__':
     #ret = get_files(r'D:\DL\dataset\eyes\jie\3x3', '*.avi')
     #print(ret)
