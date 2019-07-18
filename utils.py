@@ -2,6 +2,9 @@ import os
 import random
 import string
 import glob
+import cv2
+from PIL import ImageTk, Image
+
 
 def make_dir(path):
     if not os.path.isdir(path):
@@ -60,6 +63,12 @@ def get_row_col(sequence, index):
             break
     col = index
     return row, col
+
+def cvimg2tkimg(cvimg):        
+    cvimg = cv2.cvtColor(cvimg, cv2.COLOR_BGR2RGB)
+    cvimg = Image.fromarray(cvimg)
+    tkimg = ImageTk.PhotoImage(cvimg)
+    return tkimg
 
 
 if __name__ == '__main__':

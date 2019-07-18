@@ -1,4 +1,3 @@
-
 import tkinter as tk
 from tkinter import Frame, Label, Button, YES, LEFT, BOTH, X, DISABLED, NORMAL, RIGHT, TOP, BOTTOM
 from tkinter.messagebox import showinfo, askyesno
@@ -13,21 +12,16 @@ import os
 import dlib_utils
 import utils
 
-'''
+
 from keras import backend as K
 from keras.models import model_from_json
 from keras.preprocessing import image
-'''
 
-#img_width, img_height = 128, 32
-#model_path = r'D:\DL\model\20190424\two_eyes_gaze_keras_resnet50_model.json'
-#model_weight_path = r'D:\DL\model\20190424\two_eyes_gaze_keras_resnet50_model.h5'
 
-camera_width, camera_height = 480, 640
+camera_width, camera_height = 640, 480
 img_width, img_height = 128, 32
-model_path = r'D:\DL\code\weight\20190527\two_eyes_gaze_keras_resnet50_model.json'
-model_weight_path = r'D:\DL\code\weight\20190527\two_eyes_gaze_keras_resnet50_model.h5'
-
+model_path = r'D:\DL\code\weight\20190608\two_eyes_gaze_keras_resnet50_model.json'
+model_weight_path = r'D:\DL\code\weight\20190608\two_eyes_gaze_keras_resnet50_model.h5'
 
 
 mode_list = ['Demo for big grid', 'Demo for big camera', 'Collect data']
@@ -62,19 +56,27 @@ grid_type = '{0:d}x{1:d}'.format(grid_row, grid_col)
 #grid_type = '{0:d}@{1:d}'.format(grid_row, sum(r_col))
 
 
+
+
 class Application(Frame):
     def __init__(self, master):
         # init main window 
         master.title("Gaze Block Estimation")
         master.resizable(False, False)
-        #self.load_model_thread()
+
+
+        self.load_model_thread()
+        #self.model = None
 
         #self.frame1 = Frame(master)
         self.frame2 = Frame(master)
-        self.grid_image = cv2.imread('pixel.png')
-        self.grid_image = cv2.cvtColor(self.grid_image, cv2.COLOR_BGR2RGB)
-        self.grid_image = Image.fromarray(self.grid_image)
-        self.grid_image = ImageTk.PhotoImage(self.grid_image)
+        self.grid_image = utils.cvimg2tkimg(cv2.imread('pixel.png'))
+
+        
+        self.telephone_image = utils.cvimg2tkimg(cv2.imread('call.png'))
+        self.message_image = utils.cvimg2tkimg(cv2.imread('message.png'))
+        self.voice_image = utils.cvimg2tkimg(cv2.imread('music.png'))
+        self.exit_image = utils.cvimg2tkimg(cv2.imread('exit.jfif'))
         self.frame_grids = [0 for x in range(grid_row)]
         for i in range(grid_row):
             self.frame_grids[i] = Frame(master)
@@ -88,41 +90,17 @@ class Application(Frame):
                                                 image=self.grid_image,
                                                 width=grid_button_width, 
                                                 height=grid_button_height,
-                                                bg="black"
+                                                bg="white"
                                                 )
                 self.grids[row][col].grid(row=0, column=col)
-        #self.frame1.pack(side=LEFT, fill=BOTH, expand=YES)
+        self.grids[0][0].config(image=self.telephone_image)
+        self.grids[0][1].config(image=self.message_image)
+        self.grids[0][2].config(image=self.voice_image )
+        self.grids[2][2].config(image=self.exit_image )                    
+        self.grids[2][0].bind("<Button-1>", self.call_auto_close)
 
-        self.set_window_size(mode)
 
-        # init right grid (for control buttons and webcam)
-        #self.frame2 = Frame(master)
-        self.connect_to_camera_btn = Button(self.frame2, text='Connect')
-        self.connect_to_camera_btn.bind("<Button-1>", self.open_camera)
-        self.connect_to_camera_btn.pack()
-
-        self.load_model_btn = Button(self.frame2, text='Load model')
-        self.load_model_btn.bind("<Button-1>", self.load_model)
-        self.load_model_btn.pack()
-
-        self.status = Label(self.frame2, text="Can't find camera")
-        self.status.pack()
-        self.predict = Label(self.frame2, text="No model")
-        self.predict.pack()
-
-        # init webcam logo
-        image = cv2.imread('webcam.jpg')
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = Image.fromarray(image)
-        image = ImageTk.PhotoImage(image)
-        self.webcam = Label(self.frame2, image=image)
-        self.webcam.image = image
-        self.webcam.place(width=50, height=50)
-        self.webcam.pack()
-        # self.frame2.pack(side=LEFT, padx=0) ### comment for disable right side
-        
-        # init webcam object & thread
-        self.thread_w = threading.Thread(target=self.webcam_thread)
+        self.thread_o = threading.Thread(target=self.other_camera_thread)
         self.thread_w_signal = False
         self.capture = cv2.VideoCapture(0)
         self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, camera_width)
@@ -131,12 +109,14 @@ class Application(Frame):
         self.fps = self.capture.get(cv2.CAP_PROP_FPS)#幀率
 
         # init model thread
-        self.thread_m = threading.Thread(target=self.load_model_thread)
         #self.model = None
-
+        #self.thread_m = threading.Thread(target=self.load_model_thread)
 
         # init frame counter
         self.frame_counter = np.full((3), -1)
+
+        self.set_window_size(mode)
+
 
 
 
@@ -150,13 +130,8 @@ class Application(Frame):
                 for col in range(len(self.grids[row])):
                     #self.grids[row][col].config(height=root.winfo_screenheight()//grid_row, width=(root.winfo_screenwidth()*3/4)//len(self.grids[row]))
                     self.grids[row][col].config(height=root.winfo_screenheight()//grid_row, width=root.winfo_screenwidth()//len(self.grids[row]))
-            #self.frame1.config(height=root.winfo_screenheight())
-            #self.frame1.pack(side=LEFT)
-            #self.frame1.pack(side=LEFT, fill=BOTH, expand=YES) # it's for full
-            #self.frame2.pack(side=LEFT, padx=0)  # comment for disable right side
-            #self.frame2.config(height=root.winfo_screenheight(), width=root.winfo_screenwidth()/4)
-            #self.frame2.pack(side=RIGHT)  # comment for disable right side
-            
+            self.thread_w_signal = True
+            self.thread_o.start()
 
 
         elif select_mode == mode_list[1]:
@@ -173,6 +148,8 @@ class Application(Frame):
 
     def popup_hello(self):  # for command
         showinfo("Hello", ">_<")
+
+
 
 
     def click_grids_button(self, r, c):
@@ -223,18 +200,44 @@ class Application(Frame):
     def set_grid_color(self, row, col, color="red"):
         self.grids[row][col].config(bg=color)
 
-    def reset_grid_color(self):
+    def reset_grid_color(self, color="black"):
         for row in range(grid_row):
             for col in range(len(self.grids[row])):
-                self.grids[row][col].configure(bg="black")
+                self.grids[row][col].configure(bg=color)
 
     def popup_qq_event(self):
         showinfo("QQ", "QAQ")
 
+    def call_auto_close(self, event):
+        showinfo("提示", "即將撥打電話給朋友...")
+        '''
+        self.pop_window = tk.Tk()
+        self.pop_window.title('Hello')
+        self.pop_window['width'] = 400
+        self.pop_window['height'] = 300
+        self.pop_window_text = tk.Text(self.pop_window, width=300)
+        self.pop_window_text.insert('0.0', 'Today is good.')
+        self.pop_window_text.place(x=10, y=10, width= 380, height=230)
+        #self.pop_window.mainloop()
+        ac = threading.Thread(target=self.auto_close())
+        ac.start()
+        '''
+
+    def auto_close(self):
+        '''
+        for i in range(3):
+            time.sleep(1)
+            print('time!!!!!!!!!!!!')
+        #self.pop_window.destroy()
+        
+        print('QAQAQAQAQAQAQAQAQAQAQQAQAQAQAQ')
+        self.pop_window.iconify()
+        '''
+    
+
     def open_camera(self, event):
         self.thread_w_signal = True
         self.thread_w.start()
-        #self.status['text'] = 'Using webcam'
 
     def load_model(self, event):
         self.thread_m.start()
@@ -246,32 +249,30 @@ class Application(Frame):
             self.model = model_from_json(model_json)
         self.model.load_weights(model_weight_path)
         self.model.predict(np.zeros((1, img_height, img_width, 3)))  # before using model, must predict once to avoid 'Tensor is not an element of this graph.'
-        #self.predict['text'] = 'Using model'
+
         print('loading completed!')
 
-    def webcam_thread(self):
+
+    def other_camera_thread(self):
         print('start webcam_thread')
         # 設定影像的尺寸大小
         self.capture.set(cv2.CAP_PROP_FRAME_WIDTH, camera_width)
         self.capture.set(cv2.CAP_PROP_FRAME_HEIGHT, camera_height)
-
+        roi = [0,0,0,0]
         # 刷新縮圖
         while(self.thread_w_signal):
             start = time.time()
             ret, frame = self.capture.read() 
+            catch, tkframe, two_eyes, roi = dlib_utils.find_face_and_crop_two_eyes(frame, roi, img_width, img_height)
 
-            catch, tkframe, two_eyes = dlib_utils.find_face_and_crop_two_eyes(frame, img_width, img_height)
-
-            tkframe = cv2.cvtColor(tkframe, cv2.COLOR_BGR2RGB)  # transfer BGR to RGB
-            tkframe = Image.fromarray(tkframe)
-            tkframe = ImageTk.PhotoImage(tkframe)
-            self.webcam.imgtk = tkframe
-            self.webcam.config(image=tkframe)
-
+            cv2.imshow('Camera window', tkframe)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            
             # predict
             if self.model is not None:
                 # avoid crop nothing
-
+                
                 if catch:
                     # preprocessing
                     x = cv2.cvtColor(two_eyes, cv2.COLOR_BGR2RGB)  # transfer BGR to RGB
@@ -289,24 +290,40 @@ class Application(Frame):
                         self.frame_counter[2] += 1
                     else:
                         self.frame_counter[2] = 0
+                        self.reset_grid_color("white")
                     
                     # change color
                     if self.frame_counter[2] >= (gaze_frames-1):
-                        self.reset_grid_color()
-                        #self.set_grid_color(int(top_class / grid_row), top_class % grid_row)    ## bugggggggggggg
+                        #self.reset_grid_color("white")
                         to_change_row, to_change_col = utils.get_row_col(r_col, top_class) ## solution?
                         self.set_grid_color(to_change_row, to_change_col)                  ## solution?
                         self.frame_counter[2] -= gaze_frames
+                        
+                        if self.frame_counter[1] == 0:
+                            showinfo("提示", "即將撥打電話給朋友...")
+                        if self.frame_counter[1] == 1:
+                            showinfo("提示", "發送訊息給朋友...")
+                        if self.frame_counter[1] == 2:
+                            showinfo("提示", "播放音樂...")
+                        if self.frame_counter[1] == 8:
+                            showinfo("提示", "關閉程式")
+                            self.thread_w_signal = False
+                            self.capture.release()
+                            cv2.destroyAllWindows()
+                            root.destroy()
                     
                     print(self.frame_counter)
                     self.frame_counter[0] = self.frame_counter[1]
+                else:
+                    roi = [0,0,0,0]
 
 
             end = time.time()
             seconds = end - start
             print('fps', (1/seconds))
+        self.capture.release()
+        cv2.destroyAllWindows()
 
-    
     def on_closing(self):
         ans = askyesno(title='Quit', message='Do you want to quit?')
         if ans:
@@ -323,6 +340,9 @@ class Application(Frame):
             root.destroy()
         else:
             return
+
+
+
 
 root = tk.Tk()
 app = Application(root)

@@ -67,9 +67,16 @@ def crop_two_eyes(img, resize_width=128, resize_height=32):
         return True, new_img  # img[ty-10:ty+th+10, tx-10:tx+tw+10]
 
 
-def find_face_and_crop_two_eyes(img, resize_width=128, resize_height=32):
+def find_face_and_crop_two_eyes(img, roi, resize_width=128, resize_height=32):
     img_thumbnail = img
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    if roi[2] != 0 and roi[3] != 0 :
+        new_img = img[roi[1]:roi[1]+roi[3],roi[0]:roi[0]+roi[2]]
+        gray = cv2.cvtColor(new_img, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    #gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     rects = detector(gray, 1)
     tx, ty, tw, th = 0, 0, 0, 0
     for (i, rect) in enumerate(rects):
@@ -79,19 +86,27 @@ def find_face_and_crop_two_eyes(img, resize_width=128, resize_height=32):
         tx, ty, tw, th = get_rectangle(shape[36:47, :])
         #break  # detect only one person
     
-    if tx == 0 or ty == 0:
-        return False, img, img
+
+        tx += roi[0]
+        ty += roi[1]
+        roi = [x+roi[0], y+roi[1], w, h]
+        roi = extension_roi(img, roi)
+        #x += roi[0]
+        #y += roi[1]
+
+    if tw == 0 or th == 0:
+        return False, img, img, roi
     else:
         new_img = img[max(ty-10, 0):ty+th+10, max(tx-10, 0):tx+tw+10]
         new_img = cv2.resize(new_img, (resize_width, resize_height))
         
-        cv2.rectangle(img_thumbnail, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        #cv2.rectangle(img_thumbnail, (x, y), (x + w, y + h), (0, 255, 0), 2)
         cv2.rectangle(img_thumbnail,
                       (tx-10, ty-10),
                       (tx+tw+10, ty+th+10),
-                      (255, 0, 0),
+                      (0, 255, 0),
                       1)
-        return True, img_thumbnail, new_img
+        return True, img_thumbnail, new_img, roi
     
 def find_one_two_eyes(img):
     #img_thumbnail = img
@@ -129,13 +144,22 @@ def find_one_two_eyes(img):
 
 def main():
     cap = cv2.VideoCapture(0)
+    roi = [0,0,0,0]
     while(cap.isOpened()):
         ret, frame = cap.read()
-        #catch, frame = crop_two_eyes(frame) 
+        start = time.time()
+        catch, frame, two, roi = find_face_and_crop_two_eyes(frame, roi) 
+        if not catch:
+            roi = [0,0,0,0]
+        
         #cv2.imwrite(r'D:\DL\code\Gaze-Block-Estimation\my_eyes.png', frame)
         cv2.imshow('frame', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+            
+        end = time.time()
+        seconds = end - start
+        print('fps', (1/seconds))
     cap.release()
     cv2.destroyAllWindows()
 
@@ -326,8 +350,26 @@ def get_eyes_data_for_one(path):
     print('valid frames', valid_count)
     print('total frames', frame_count)
 
+def extension_roi(img,roi,x=1.5):
+    # crop img with roi, then extend x*100% roi.h and roi.w
+    max_h = img.shape[0] # height
+    max_w = img.shape[1] # width
+    extend_min_x = int(roi[0]-roi[2]*((x-1)/2))
+    if extend_min_x < 0 : 
+        extend_min_x = 0
+    extend_min_y = int(roi[1]-roi[3]*((x-1)/2))
+    if extend_min_y < 0 : 
+        extend_min_y = 0
+    extend_max_x = int(roi[0]+roi[2]*(1+(x-1)/2))
+    if extend_max_x >= max_w : 
+        extend_max_x = max_w - 1
+    extend_max_y = int(roi[1]+roi[3]*(1+(x-1)/2))
+    if extend_max_y >= max_h : 
+        extend_max_y = max_h - 1
+    return [extend_min_x, extend_min_y, extend_max_x - extend_min_x, extend_max_y - extend_min_y]
+
 if __name__ == '__main__':
-    #main()
+    main()
     #time_of_crop()
     #test_write_video()
     #test_load_video()
@@ -345,7 +387,7 @@ if __name__ == '__main__':
     end = time.time() - start
     print(end, 'secs')
     '''
-    
+    '''
     name = 'jie4'
     for i in range(3,6):
         grid_size = i
@@ -356,4 +398,4 @@ if __name__ == '__main__':
         get_eyes_data_t(folder_path)
         end = time.time() - start
         print(end, 'secs')
-        
+    '''
